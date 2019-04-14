@@ -1,0 +1,10 @@
+{
+  "groups": [
+
+    {
+      "name": "com.github.jaryur.sequence",
+      "type": "com.github.jaryur.sequence.configuration.SequenceProperties",
+      "sourceType": "com.github.jaryur.sequence.configuration.SequenceProperties"
+    }
+  ]
+}
