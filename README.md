@@ -1,5 +1,5 @@
 # Introduction
- s simple sequence generator based on mysql, but do not guarantee global exact seriality
+ s simple sequence generator based on mysql, but do not guarantee exactly overall seriality
  
 # Feature
 
@@ -33,17 +33,15 @@
      sequence.spec.seq1=100,5
      ```
  
- > step代表每次取出的一段sequence的大小写,cacheNSteps代表缓存的sequence个数，详见【原理】部分说明
-     
-   * 数据源配置
+   * datasource properties
     
-        ```
-        #sequence数据源
-        sequence.datasource.url=jdbc:mysql://localhost:3306/sequence?useUnicode=true&characterEncoding=utf8
-        &zeroDateTimeBehavior=convertToNull
-        sequence.datasource.username=root
-        sequence.datasource.password=
-        sequence.datasource.driverClass=com.mysql.jdbc.Driver
+    ```
+    sequence.datasource.url=jdbc:mysql://localhost:3306/sequence?useUnicode=true&characterEncoding=utf8
+    &zeroDateTimeBehavior=convertToNull
+    sequence.datasource.username=root
+    sequence.datasource.password=
+    sequence.datasource.driverClass=com.mysql.jdbc.Driver
+        
        ```
 
 3. create database **sequence**  on mysql
@@ -88,10 +86,8 @@
     
 4.  SequenceGenerator injection
 
-* only on sequence needed: **private SingleSequenceGenerator sequenceGenerator** 
-* multi sequences needed: **private SequenceGenerator sequenceGenerator** 
-
-
-# 原理 
-基于MySql表，每次预先获取step个序号，更新数据库current字段为current + step，每次获取序号优先从内存中序号段获取，如果内存中序号段已经用完，则从数据库获取下一个序号段
-cacheNSteps参数表示提前取出序号段并进行本地缓存（缓存 cacheNSteps*step 个序号），自动异步补充，减少序号段消耗完时访问数据库的耗时，提升性能
+only on sequence: 
+* **private SingleSequenceGenerator sequenceGenerator**
+ 
+multi sequences: 
+*  **private SequenceGenerator sequenceGenerator** 
