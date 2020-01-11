@@ -42,7 +42,7 @@
     sequence.datasource.password=
     sequence.datasource.driverClass=com.mysql.jdbc.Driver
         
-       ```
+    ```
 
 3. create database **sequence**  on mysql
 
@@ -57,7 +57,7 @@
       `min` bigint(20) unsigned NOT NULL DEFAULT '1' COMMENT '分区最小序号',
       `max` bigint(20) unsigned NOT NULL DEFAULT '4294967295' COMMENT '分区最大序号',
       `current_segment` bigint(20) unsigned NOT NULL DEFAULT '1' COMMENT '分区当前可用序号',
-      `segment_unit` int(11) NOT NULL DEFAULT '300' COMMENT '每个分区包含序号数',
+      `segment_unit` int(11) NOT NULL DEFAULT '1000000' COMMENT '每个分区包含序号数',
       `version` bigint(20) NOT NULL DEFAULT '1' COMMENT '自增版本号',
       PRIMARY KEY (`id`),
       UNIQUE KEY `idx_uniq_name` (`application`,`sequence_name`) USING BTREE
@@ -79,15 +79,11 @@
     
      ```
    * insert your sequence record
+   
     ```
-    insert into `sequence` ( `min`, `max`, `segment_unit`, `sequence_name`,`application`) 
-    values ( '1' , '4294967295', '1000000', 'my-sequence-name','my-application-name');
+    insert into `sequence` ( `sequence_name`,`application`) values ('my-sequence-name','my-application-name');
     ```
     
-4.  SequenceGenerator injection
+4.  SequenceGenerator auto injection
 
-only on sequence: 
-* **private SingleSequenceGenerator sequenceGenerator**
- 
-multi sequences: 
-*  **private SequenceGenerator sequenceGenerator** 
+**SingleSequenceGenerator**  or  **SequenceGenerator** 
