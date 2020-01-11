@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by Jaryur
  *
- * Comment:全局ID生成接口，整体自增
+ * Comment:sequence interface
  */
 public interface SequenceGenerator {
 

@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Jaryur
- *
+ * <p>
  * Comment:
  */
 
@@ -36,14 +36,12 @@ public class MysqlSequenceGenerator implements SequenceGenerator {
 
     private int skip;
 
+    private boolean lazyMode;
+
     public MysqlSequenceGenerator(DataSource dataSource, String application, List<String> sequenceNames, int step, int
-            cacheNSteps, int skip, Map<String, SequenceSpecConfig> sequenceSpecConfigMap) {
+            cacheNSteps, int skip, boolean lazyMode, Map<String, SequenceSpecConfig> sequenceSpecConfigMap) {
         if (skip < 0) {
             throw new RuntimeException("illegal sequence config:skip=" + skip + ", must be positive");
-        }
-
-        if (cacheNSteps <= 0) {
-            throw new RuntimeException("illegal sequence config:cacheNSteps=" + cacheNSteps + ", must be greater than 0");
         }
         this.application = application;
         this.dataSource = dataSource;
@@ -52,6 +50,7 @@ public class MysqlSequenceGenerator implements SequenceGenerator {
         this.skip = skip;
         this.cacheNSteps = cacheNSteps;
         this.sequenceSpecConfigMap = sequenceSpecConfigMap;
+        this.lazyMode = lazyMode;
         init();
     }
 
@@ -79,21 +78,18 @@ public class MysqlSequenceGenerator implements SequenceGenerator {
         if (dataSource == null) {
             throw new SequenceException("datasource cannot be null");
         }
-        if (sequenceNames == null || sequenceNames.size() == 0) {
-            throw new SequenceException("sequenceNames config cannot be null");
-        }
-
-        for (String sequenceName : sequenceNames) {
-            if (sequenceName != null && sequenceName.length() > 0) {
-                SequenceSpecConfig specConfig = sequenceSpecConfigMap.get(sequenceName);
-                SequenceDatasource datasource = new SequenceDatasource(dataSource, sequenceNames);
-                Sequence sequence = specConfig == null ? new MySQLSequence(datasource, application, sequenceName,
-                        step, cacheNSteps, skip)
-                        : new MySQLSequence(datasource, application, sequenceName, specConfig.getStep(), specConfig
-                        .getCacheNSteps(), skip);
-                sequenceCacheMap.putIfAbsent(getKey(sequenceName), sequence);
+        if (!lazyMode) {
+            if (sequenceNames == null || sequenceNames.size() == 0) {
+                throw new SequenceException("sequenceNames config cannot be null");
+            }
+            for (String sequenceName : sequenceNames) {
+                if (sequenceName != null && sequenceName.length() > 0) {
+                    Sequence sequence = createSequence(sequenceName);
+                    sequenceCacheMap.putIfAbsent(getKey(sequenceName), sequence);
+                }
             }
         }
+
     }
 
     @Override
@@ -114,19 +110,23 @@ public class MysqlSequenceGenerator implements SequenceGenerator {
     private Sequence getSequence(String sequenceName) {
         Sequence sequence = sequenceCacheMap.get(getKey(sequenceName));
         if (sequence == null) {
-            SequenceSpecConfig specConfig = sequenceSpecConfigMap.get(sequenceName);
-            SequenceDatasource datasource = new SequenceDatasource(dataSource, sequenceNames);
-            sequence = specConfig == null ? new MySQLSequence(datasource, application, sequenceName, step,
-                    cacheNSteps, skip)
-                    : new MySQLSequence(datasource, application, sequenceName, specConfig.getStep(), specConfig
-                    .getCacheNSteps(), skip);
-            sequenceCacheMap.putIfAbsent(sequenceName, sequence);
+            sequenceCacheMap.putIfAbsent(getKey(sequenceName), createSequence(sequenceName));
         }
         return sequenceCacheMap.get(getKey(sequenceName));
     }
 
     public String getKey(String sequenceName) {
         return String.join(splitChar, application, sequenceName);
+    }
+
+    private Sequence createSequence(String sequenceName) {
+        SequenceSpecConfig specConfig = sequenceSpecConfigMap.get(sequenceName);
+        SequenceDatasource datasource = new SequenceDatasource(dataSource, sequenceNames);
+        int seqConfig = specConfig == null ? step : specConfig.getStep();
+        int cacheNStepConfig = specConfig == null ? cacheNSteps : specConfig.getCacheNSteps();
+        return cacheNStepConfig == 0 ? new MysqlSequence(datasource, application, sequenceName,
+                seqConfig, skip)
+                : new MySQLCachedSequence(datasource, application, sequenceName, seqConfig, cacheNStepConfig, skip);
     }
 
 }

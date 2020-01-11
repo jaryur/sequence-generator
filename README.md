@@ -1,9 +1,17 @@
 # Introduction
- 基于Mysql的自增sequence生成器
+ s simple sequence generator based on mysql, but do not guarantee global exact seriality
+ 
+# Feature
+
+1. Advanced performance by caching sequence locally
+2. Asynchronous loading when sequence is almost used up
+3. Lazy mode supported
+4. Single sequence & Sequence range
+
 
 # Quick Start 
 
-1. 引入Maven依赖
+1. maven dependency
 
     ```
     <dependency>
@@ -13,21 +21,15 @@
     </dependency>
     ```
 
-2. application.properties配置
+2. application.properties
     
-    * sequence配置
+    * sequence properties
      ```
-     #应用名
      sequence.application=default-application
-     #sequence名，可以指定多个,逗号分割
      sequence.names=seq1,seq2
-     #每次获取的序号数
      sequence.step=300
-     #每次获取Sequence跳过的个数
-     #sequence.skip=0
-     #缓存cacheNSteps个序号段
+     sequence.skip=0
      sequence.cacheNSteps=3
-     #指定seq1的step和cacheNSteps
      sequence.spec.seq1=100,5
      ```
  
@@ -44,9 +46,9 @@
         sequence.datasource.driverClass=com.mysql.jdbc.Driver
        ```
 
-3. 新增对应的sequence记录
+3. create database **sequence**  on mysql
 
-    * 创建表
+    * create tables
     ```
     
     CREATE TABLE `sequence` (
@@ -78,19 +80,17 @@
        
     
      ```
-   * 新增sequence记录
+   * insert your sequence record
     ```
     insert into `sequence` ( `min`, `max`, `segment_unit`, `sequence_name`,`application`) 
-    values ( '1' , '4294967295', '1000000', 'sequence名','应用名');
+    values ( '1' , '4294967295', '1000000', 'my-sequence-name','my-application-name');
     ```
     
-4. 通过Spring注入Bean
+4.  SequenceGenerator injection
 
-* 只配置一个sequence, 通过Spring注入 **private SingleSequenceGenerator sequenceGenerator** ,并调用**getNextInt**或**getNextLong**方法
-* 配置了多个sequence, 通过Spring注入 **private SequenceGenerator sequenceGenerator** ,并调用**getNextInt**或**getNextLong**方法
-* 批量获取一批序号段，调用**getRange**方法（此时skip参数不生效）
+* only on sequence needed: **private SingleSequenceGenerator sequenceGenerator** 
+* multi sequences needed: **private SequenceGenerator sequenceGenerator** 
 
-> 默认超时时间1S
 
 # 原理 
 基于MySql表，每次预先获取step个序号，更新数据库current字段为current + step，每次获取序号优先从内存中序号段获取，如果内存中序号段已经用完，则从数据库获取下一个序号段

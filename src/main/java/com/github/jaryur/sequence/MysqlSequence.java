@@ -1,34 +1,25 @@
 package com.github.jaryur.sequence;
 
-import com.github.jaryur.sequence.exception.InvalidSequenceException;
 import com.github.jaryur.sequence.exception.SequenceException;
-import com.github.jaryur.sequence.exception.SequenceModifiedException;
 import com.github.jaryur.sequence.range.InnerSequenceRange;
 import com.github.jaryur.sequence.range.MySQLSequenceRangeGetter;
 import com.github.jaryur.sequence.support.SequenceConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by Jaryur
- *
  * Comment:
  */
-public class MySQLSequence implements Sequence {
+public class MysqlSequence implements Sequence {
 
-    private Logger logger = LoggerFactory.getLogger(MySQLSequence.class);
 
-    private volatile boolean initialized = false;
+    private Logger logger = LoggerFactory.getLogger(MySQLCachedSequence.class);
 
     private SequenceDatasource dataSource;
-
-    private ReentrantLock rangeLock = new ReentrantLock();
 
     private String application;
 
@@ -40,59 +31,23 @@ public class MySQLSequence implements Sequence {
 
     private volatile InnerSequenceRange sequenceRange;
 
-    private BlockingQueue<InnerSequenceRange> blockingQueue = null;
-
-    public void startProducer() {
-        Executors.newSingleThreadExecutor().submit(() -> {
-            while (true) {
-                try {
-                    if (blockingQueue.remainingCapacity() <= 0) {
-                        Thread.sleep(5);
-                        continue;
-                    }
-                    InnerSequenceRange range = MySQLSequenceRangeGetter.getInstance(dataSource).getNextRange
-                            (application, sequenceName, step);
-                    if (range != null) {
-                        blockingQueue.put(range);
-                    }
-                } catch (SequenceModifiedException e) {
-                    logger.info("clear sequence range queue,name:{},current size:{}", sequenceName, blockingQueue.size());
-                    blockingQueue.clear();
-                } catch (InvalidSequenceException e) {
-                    Thread.sleep(1000);
-                    logger.error(e.getMessage());
-                } catch (Exception e) {
-                    logger.error("sequence range producer failed", e);
-                }
-            }
-
-        });
-    }
+    private ReentrantLock rangeLock = new ReentrantLock();
 
 
-    public MySQLSequence(SequenceDatasource dataSource, String application, String sequenceName, int step, int
-            cacheNSteps, int skip) {
+    public MysqlSequence(SequenceDatasource dataSource, String application, String sequenceName, int step, int skip) {
         this.dataSource = dataSource;
         this.application = application;
         this.sequenceName = sequenceName;
         this.step = step;
         this.skip = skip;
-        blockingQueue = new LinkedBlockingQueue<>(cacheNSteps);
-        init();
     }
 
 
     @Override
     public void init() {
-        if (initialized == false) {
-            synchronized (this) {
-                if (initialized == false) {
-                    startProducer();
-                }
-                initialized = true;
-            }
-        }
+
     }
+
 
     @Override
     public long next(long timeout, TimeUnit timeUnit) {
@@ -139,20 +94,17 @@ public class MySQLSequence implements Sequence {
     public void resetSequenceRange() {
         long start = System.nanoTime();
         try {
-            boolean flag = rangeLock.tryLock(3, TimeUnit.SECONDS);
+            boolean flag = rangeLock.tryLock(1, TimeUnit.SECONDS);
             if (flag) {
                 try {
                     if (sequenceRange != null && !sequenceRange.needRetrieve()) {
                         return;
                     }
                     for (int i = 0; i < SequenceConstants.DEFAULT_RETRY_TIMES; i++) {
-                        if (blockingQueue.size() != 0) {
-                            sequenceRange = blockingQueue.poll(50L, TimeUnit.MILLISECONDS);
-                            if (sequenceRange != null) {
-                                break;
-                            }
-                        } else {
-                            Thread.sleep(200);
+                        sequenceRange = MySQLSequenceRangeGetter.getInstance(dataSource).getNextRange
+                                (application, sequenceName, step);
+                        if (sequenceRange != null) {
+                            break;
                         }
                     }
                 } catch (Exception e) {
@@ -174,8 +126,11 @@ public class MySQLSequence implements Sequence {
 
     }
 
+
     @Override
     public void destory() {
 
     }
+
 }
+

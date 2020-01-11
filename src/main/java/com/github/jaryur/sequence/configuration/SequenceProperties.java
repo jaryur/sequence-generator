@@ -26,21 +26,23 @@ public class SequenceProperties {
      */
     private List<String> names;
 
+    private Boolean lazyMode;
+
     /**
      * global step
      */
-    private int step = 300;
+    private int step = -1;
 
 
     /**
      * global cacheNSteps
      */
-    private int cacheNSteps;
+    private int cacheNSteps = -1;
 
     /**
-     * skip N everytime
+     * skip N every time
      */
-    private int skip=0;
+    private int skip = 0;
 
     /**
      * specific step and cacheNSteps config
@@ -48,7 +50,7 @@ public class SequenceProperties {
     private Map<String, String> spec;
 
     public String getApplication() {
-        return StringUtils.isNullOrEmpty(application) ? SequenceConstants.DEFAULT_APPLICATION_NAME : application;
+        return application;
     }
 
     public void setApplication(String application) {
@@ -101,6 +103,14 @@ public class SequenceProperties {
 
     public void setSpec(Map<String, String> spec) {
         this.spec = spec;
+    }
+
+    public Boolean getLazyMode() {
+        return lazyMode;
+    }
+
+    public void setLazyMode(Boolean lazyMode) {
+        this.lazyMode = lazyMode;
     }
 
     public static class DatasourceConfig {

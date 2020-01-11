@@ -5,14 +5,18 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.concurrent.TimeUnit;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@Rollback(true)
+@Sql({"classpath:schema.sql","classpath:data.sql"})
 public class MySQLSequenceTest {
-    String SequanceName = "test_sequence";
+    String SequanceName = "default-sequence-name";
 
     @Autowired
     private MysqlSequenceGenerator mysqlSequenceGenerator;
